@@ -21,7 +21,6 @@ Magik is a dynamically typed, object-oriented programming language built for Sma
 ```magik
 a << 1.234         # "a becomes 1.234"
 b +<< a            # b << b + a  (compound assignment)
-c << "foo" + "bar" # string concatenation
 ```
 **Never use `=` for assignment.** `=` is equality comparison only.
 
@@ -179,6 +178,13 @@ _endif
 ```magik
 _if a _is _unset _then write("a is null") _endif
 _if a = b _then write("a equals b") _endif
+```
+
+**Formatting:** In a multi-line `_if`, place a newline after each `_then`, `_else`, `_and`, `_or`, `_andif`, `_orif`, `_xorif`.
+
+**Expression form / method chaining:** `_if` can be used as an expression and a method called directly on `_endif`:
+```magik
+result << _if cond _then >> a _else >> b _endif.write_string
 ```
 
 ---
@@ -704,6 +710,8 @@ In the REPL prompt, `$` submits the block. In files, it acts as a statement deli
 ### Integer
 ```magik
 n << 42
+n.incremented       # n + 1 (prefer over n + 1)
+n.decremented       # n - 1 (prefer over n - 1)
 n.shift(3)          # n * 2^3 (bit shift)
 n.factorial()       # n!
 n.power2()          # smallest power of 2 >= n
@@ -738,12 +746,17 @@ ds_environment        # database environment
 smallworld_product    # product info
 ```
 
-### Checking for Unset Before Use
+### Checking for Unset Before Use / Default Value Assignment
 ```magik
 _if .my_slot _isnt _unset
 _then
     .my_slot.do_something()
 _endif
+
+# Prefer the shorthand for default assignment:
+var << var.default(_true)
+# Over the verbose form:
+# var << _if var _isnt _unset _then >> var _else >> _true _endif
 ```
 
 ### Method Chaining / Message Passing
@@ -769,10 +782,12 @@ magik_rep.load_chunck(some_string.read_stream())
 - **Don't leave production code without error handling** — always protect against tracebacks reaching the end user
 - **Don't use `hash_table` in Smallworld 5 when not needed** — prefer `concurrent_hash_map` for performance and thread safety; use `property_list` only when insertion order matters
 - **Don't concatenate strings with `+`** — use `sw:write_string(a, b, c)` instead
-- **Don't access slots directly outside `init()` and accessor methods** — always go through `define_slot_access`-generated accessors
+- **Don't access slots directly outside `init()` and accessor methods** — always go through `define_slot_access`-generated accessors; use `_self.x` not `.x` (direct slot syntax is only valid inside `init()` and accessor implementations)
 - **Don't define class constants inside method bodies** — use `define_shared_constant()`
 - **Don't leave `_protection` blocks empty** when a resource must be closed — an empty `_protection` block is a bug
 - **Don't confuse `empty?` and `empty()`** — `empty?` tests emptiness; `empty()` clears the collection
+- **Don't use `col.size > 0` to test non-emptiness** — use `col.empty?.not`; likewise use `col.size.zero?` over `col.size = 0`
+- **Use `boolean?.not` not `_not boolean?`** — the method form is idiomatic Magik
 - **Don't use string concatenation for file paths** — use `sw:system.pathname_down()` and related utilities
 - **Don't define multiple `init()` methods** — a single initialisation entry point makes subclassing far simpler
 - **Don't use `!name!` naming for globals** — the `!name!` convention is reserved for dynamic (thread-local) variables
@@ -823,4 +838,5 @@ Non-slot method:   brackets — my_obj.calculate()
 Setter:            foo<<  (paired with slot-like getter foo)
 String concat:     sw:write_string(a, b, c)   (not a + b + c)
 Empty test:        col.empty?     (not col.empty() which clears!)
+Symbol parens:     :my_method.with_parentheses  → "my_method()"   (invokedynamic method keys for methods with args)
 ```
